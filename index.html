@@ -93,10 +93,17 @@ body:not(.play) #hud,body:not(.play) #spd,body:not(.play) .pad,body:not(.play) #
 <p>เลือกสนาม เลือกรถ เลือกยาง แล้วลุยเลย ระวังกำแพงข้างสนาม ชนแล้วเสียความเร็ว</p>
 <input id="nick" maxlength="12" placeholder="ชื่อของคุณ" autocomplete="off">
 <button id="b-solo">เริ่มเกม</button>
+<button id="b-career" class="alt">โหมด Career · ชิงแชมป์</button>
 <button id="b-make" class="alt" disabled>สร้างห้อง</button>
 <button id="b-join" class="alt" disabled>เข้าร่วมห้อง</button>
 <div id="jrow" hidden><input id="code" inputmode="numeric" maxlength="4" placeholder="เลขห้อง 4 หลัก" autocomplete="off"><button id="b-enter">เข้าห้อง</button></div>
 <p id="msg" class="note"></p>
+</div>
+<div class="card w" id="s-career" hidden>
+<h2>CAREER CHAMPIONSHIP</h2><p class="note">สะสมคะแนนตลอดฤดูกาล · แข่งกับ AI 19 คน</p>
+<div class="fr"><span>สนามถัดไป</span><b id="career-next">Singapore</b></div><p id="career-progress" class="note"></p>
+<h2 style="font-size:19px">ตารางคะแนนนักขับ</h2><ul id="career-standings"></ul>
+<button id="career-race">แข่งสนามถัดไป ▶</button><button id="career-reset" class="alt">เริ่มฤดูกาลใหม่</button><button id="career-back" class="alt">กลับเมนูหลัก</button>
 </div>
 <div class="card w" id="s-setup" hidden>
 <h2>เลือกสนาม</h2>
@@ -130,9 +137,9 @@ body:not(.play) #hud,body:not(.play) #spd,body:not(.play) .pad,body:not(.play) #
 <button id="b-leave" class="alt">ออกจากห้อง</button>
 </div>
 <div class="card" id="s-res" hidden>
-<h1>เข้าเส้นชัย!</h1>
+<h1 id="res-title">เข้าเส้นชัย!</h1>
 <ul id="rl"></ul>
-<button id="b-again">แข่งอีกรอบ</button>
+<button id="b-again">แข่งอีกรอบ</button><button id="career-continue" class="alt" hidden>ตารางคะแนน / สนามถัดไป</button>
 <p id="rw" class="note">รอเจ้าของห้องเริ่มรอบใหม่…</p>
 <button id="b-exit" class="alt">กลับเมนู</button>
 </div>
@@ -169,6 +176,12 @@ p:[[0,0],[2.5,0],[4.4,-.1],[5.3,.5],[5.2,1.5],[4.3,2.1],[4.6,3],[5.8,3.4],[7,3],
 p:[[0,6],[2.5,6],[4.8,6],[6,5.6],[6.8,4.7],[6.3,3.8],[5.2,3.9],[4.6,3.1],[5.4,2.2],[7.2,1.8],[9.2,1.4],[10.2,.6],[9.4,-.2],[7.6,-.1],[5.8,.5],[3.5,.7],[1.4,1.5],[-.4,2.6],[-1,4.2],[-.8,5.5]]},
 {n:'Alpine Ring',c:'ออสเตรีย',km:4.3,hw:66,sr:124,tw:.9,d:'สนามสั้นรูปสามเหลี่ยม มีทางตรงสามช่วง โค้งขวาเบรกหนักท้ายทางตรงแรก โค้งซ้าย-ขวาช่วงขึ้นเนิน โค้งขวาสุดท้ายก่อนเข้าตรงสตาร์ท แซงง่ายท้ายทางตรง',
 p:[[0,0],[3,0],[6,0],[8.2,.3],[8.8,1.2],[8.2,2],[8.9,2.9],[8.8,4],[7.6,4.6],[6.2,3.6],[5,3.2],[3.2,3.8],[1.4,4],[-.4,3.1],[-1.3,1.8],[-1,.5]]}];
+// Extra F1 calendar venues. The layouts use the game's procedural track generator.
+const EXTRA=[
+['Singapore','สิงคโปร์',5.1,true],['Jeddah','ซาอุดีอาระเบีย',6.2,true],['Bahrain','บาห์เรน',5.4,true],['Abu Dhabi','สหรัฐอาหรับเอมิเรตส์',5.3,true],
+['Suzuka','ญี่ปุ่น',5.8,false],['Shanghai','จีน',5.5,false],['Melbourne','ออสเตรเลีย',5.3,false],['Imola','อิตาลี',4.9,false],['Miami','สหรัฐอเมริกา',5.4,false],['Montréal','แคนาดา',4.4,false],['Barcelona','สเปน',4.7,false],['Spielberg','ออสเตรีย',4.3,false],['Silverstone','สหราชอาณาจักร',5.9,false],['Budapest','ฮังการี',4.4,false],['Zandvoort','เนเธอร์แลนด์',4.3,false],['Monza','อิตาลี',5.8,false],['Austin','สหรัฐอเมริกา',5.5,false],['Mexico City','เม็กซิโก',4.3,false],['São Paulo','บราซิล',4.3,false],['Las Vegas','สหรัฐอเมริกา',6.2,true],['Lusail','กาตาร์',5.4,true],['Portimão','โปรตุเกส',4.7,false]];
+const BASE_TRACKS=TK.slice();
+EXTRA.forEach((e,i)=>{const b=BASE_TRACKS[i%BASE_TRACKS.length];TK.push({...b,n:e[0],c:e[1],km:e[2],night:e[3],d:(e[3]?'สนามแข่งยามค่ำคืน':'สนามแข่งสไตล์ F1')+' · '+e[0],p:b.p.map(([x,y])=>[x*(i%2?1.03:1),y*(i%3?1:.97)])})});
 const cr=(a,b,c,d,t)=>0.5*(2*b+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t);
 const build=t=>{
 const P=t.p,n=P.length,raw=[];
@@ -244,6 +257,10 @@ g.restore()};
 
 /* ---- state ---- */
 const keys={},cfg={tk:0,laps:3,mode:'solo',n:3,car:0,col:1,tyre:1};
+const CAREER_POINTS=[25,18,15,12,10,8,6,4,2,1], CAREER_DRIVERS=['คุณ','Aki','Bruno','Chen','Dara','Egon','Farah','Gabi','Hiro','Ivan','Jules','Kai','Luca','Mika','Nico','Omar','Pavel','Quinn','Ravi','Sora'];
+let career={round:0,points:{},results:[]};
+const loadCareer=()=>{try{const x=JSON.parse(localStorage.getItem('lc-career-v1')||'null');if(x&&x.points&&Array.isArray(x.results))career=x}catch(e){}};
+const saveCareer=()=>{try{localStorage.setItem('lc-career-v1',JSON.stringify(career))}catch(e){}};loadCareer();
 let TOTAL=3,car=grid(0),mode='ready',laps=0,lapStart=0,t0=0,half=false,prev=0,times=[],best=0,cdStart=0,pr=0,hit=0,DT=.016,myFin=null;
 let tyre={k:1,w:0},stP0=0,pitT=0,pitReq=-1,pitNext=1,AIS=[],fr=0;
 let R=null,room=null,net=false,lastRnd=0,rm={},RC=[],nt=0,unP=null,busy=false;
@@ -256,13 +273,13 @@ const isHost=()=>!net||ps().some(p=>p.isMe&&p.presence.host);
 const playing=()=>document.body.classList.contains('play');
 
 /* ---- ui helpers ---- */
-const show=id=>['s-menu','s-setup','s-car','s-lobby','s-res'].forEach(s=>$(s).hidden=s!==id);
+const show=id=>['s-menu','s-career','s-setup','s-car','s-lobby','s-res'].forEach(s=>$(s).hidden=s!==id);
 const msg=t=>{$('msg').textContent=t||''};
 const sel=(el,on)=>el.classList.toggle('sel',!!on);
 const row=(c,a,b)=>{const e=document.createElement('li'),s1=document.createElement('span'),s2=document.createElement('span');
 if(c){const d=document.createElement('i');d.style.background=c;s1.append(d)}
 s1.append(a);s2.textContent=b||'';e.append(s1,s2);return e};
-const btns=()=>{const h=isHost();$('b-start').hidden=!h;$('wait').hidden=h;$('b-again').hidden=!h;$('rw').hidden=h||!net};
+const btns=()=>{const h=isHost();$('b-start').hidden=!h;$('wait').hidden=h;$('b-again').hidden=!h;$('rw').hidden=h||!net;$('career-continue').hidden=cfg.mode!=='career'};
 const lobby=()=>{show('s-lobby');renderPl();btns()};
 const renderPl=()=>{$('pl').replaceChildren(...ps().map((p,i)=>row(PAL[(nf(p.presence.c)||i)%6],nm(p)+(p.isMe?' (คุณ)':'')+(p.presence.host?' ★':''),'')))};
 const renderRes=()=>{
@@ -278,13 +295,16 @@ const sc=o=>o.fin!=null?1000-o.fin:o.pr,me=myFin!=null?1000-myFin:pr;
 return'อันดับ '+(1+RC.filter(r=>sc(r)>me).length)+'/'+(RC.length+1)};
 
 /* ---- setup + car screens ---- */
+const careerUI=()=>{const idx=career.round%TKS.length;$('career-next').textContent=TKS[idx].n+(TKS[idx].night?' 🌙':'');$('career-progress').textContent='สนามที่ '+Math.min(career.round+1,TKS.length)+' / '+TKS.length+' · คะแนน 25–18–15–12–10–8–6–4–2–1';const a=CAREER_DRIVERS.map(n=>({n,p:career.points[n]||0})).sort((x,y)=>y.p-x.p||x.n.localeCompare(y.n));$('career-standings').replaceChildren(...a.map((x,i)=>row(i===0?'#f2c230':null,(i+1)+'. '+x.n,x.p+' แต้ม')))};
+$('b-career').onclick=()=>{loadCareer();careerUI();show('s-career')};$('career-back').onclick=()=>show('s-menu');$('career-reset').onclick=()=>{career={round:0,points:{},results:[]};saveCareer();careerUI()};
+$('career-race').onclick=()=>{cfg.mode='career';cfg.tk=career.round%TKS.length;cfg.laps=3;cfg.n=19;cfg.car=0;cfg.col=0;setupUI();show('s-setup')};
 const setupUI=()=>{
 const t=TKS[cfg.tk];
 $('tn').textContent=t.n;$('tc').textContent='สนามประเทศ'+t.c+' · '+t.km+' กม.';
 $('ti').textContent=t.d+' กำแพงห่างขอบแทร็กประมาณ '+((t.sr-t.hw)/10).toFixed(1)+' เมตร';
 $('lv').textContent=cfg.laps;$('av').textContent=cfg.n;
 sel($('m-solo'),cfg.mode==='solo');sel($('m-ai'),cfg.mode==='ai');
-$('md-row').hidden=net;$('ai-row').hidden=net||cfg.mode!=='ai';
+$('md-row').hidden=net||cfg.mode==='career';$('ai-row').hidden=net||cfg.mode!=='ai';$('s-ok').textContent=cfg.mode==='career'?'เริ่ม Career ▶':'ยืนยัน ไปต่อ ▶';
 mini(tvc,600,240,t,null,9)};
 const carUI=()=>{
 const m=CARS[cfg.car];$('cn').textContent=m.n;
@@ -303,7 +323,7 @@ $('am').onclick=()=>{cfg.n=Math.max(1,cfg.n-1);setupUI()};
 $('apl').onclick=()=>{cfg.n=Math.min(5,cfg.n+1);setupUI()};
 $('m-solo').onclick=()=>{cfg.mode='solo';setupUI()};
 $('m-ai').onclick=()=>{cfg.mode='ai';setupUI()};
-$('s-ok').onclick=()=>{show('s-car');carUI()};
+$('s-ok').onclick=()=>{if(cfg.mode==='career'){cfg.n=19;cfg.car=0;cfg.col=0;beginCareerRace()}else{show('s-car');carUI()}};
 $('s-back').onclick=()=>{if(net)lobby();else show('s-menu')};
 $('c-prev').onclick=()=>{cfg.car=(cfg.car+CARS.length-1)%CARS.length;carUI()};
 $('c-next').onclick=()=>{cfg.car=(cfg.car+1)%CARS.length;carUI()};
@@ -314,13 +334,14 @@ document.querySelectorAll('#ty [data-p]').forEach(b=>b.onclick=()=>{const k=+b.d
 const pitUI=()=>document.querySelectorAll('#ty [data-p]').forEach(b=>sel(b,+b.dataset.p===pitReq));
 
 /* ---- race flow ---- */
+const beginCareerRace=()=>{cfg.mode='career';cfg.tk=career.round%TKS.length;cfg.car=0;cfg.n=19;cfg.col=0;cfg.laps=3;begin(cfg.tk,3)};
 const begin=(tk,lp)=>{
 T=TKS[tk==null?cfg.tk:tk];TOTAL=lp||cfg.laps;AIS=[];
 let slot=0;
 if(net)slot=Math.max(0,ps().findIndex(p=>p.isMe));
-else{const n=cfg.mode==='ai'?cfg.n:0;slot=n?Math.floor(Math.random()*(n+1)):0;let sl=0;
+else{const n=(cfg.mode==='ai'||cfg.mode==='career')?cfg.n:0;slot=n?Math.floor(Math.random()*(n+1)):0;let sl=0;
 for(let k=0;k<n;k++){if(sl===slot)sl++;const g0=grid(sl);
-AIS.push({s:-(3+3*(sl>>1))*T.ds,v:0,sk:.9+Math.random()*.1,off:g0.o,q:Math.random()*6,m:Math.floor(Math.random()*CARS.length),c:(cfg.col+1+k)%6,n:['Aki','Bruno','Chen','Dara','Egon'][k],k:Math.floor(Math.random()*3),w:0,laps:0,pit:0,nk:1,fin:null,x:g0.x,y:g0.y,a:g0.a,pr:0});sl++}}
+AIS.push({s:-(3+3*(sl>>1))*T.ds,v:0,sk:.9+Math.random()*.1,off:g0.o,q:Math.random()*6,m:cfg.mode==='career'?0:Math.floor(Math.random()*2),c:(cfg.col+1+k)%6,n:cfg.mode==='career'?CAREER_DRIVERS[k+1]:['Aki','Bruno','Chen','Dara','Egon'][k%5],k:Math.floor(Math.random()*3),w:0,laps:0,pit:0,nk:1,fin:null,x:g0.x,y:g0.y,a:g0.a,pr:0});sl++}}
 car=grid(slot);laps=0;half=false;prev=near(car.x,car.y).i;times=[];pr=0;rm={};myFin=null;
 tyre={k:cfg.tyre,w:0};stP0=-.01;pitT=0;pitReq=-1;pitUI();
 try{best=parseFloat(localStorage.getItem('lc-b'+T.n))||0}catch(e){best=0}
@@ -329,8 +350,10 @@ if(net)room.presence({st:'race',c:cfg.col,m:cfg.car,fin:null}).catch(()=>{});
 };
 const finish=()=>{
 mode='done';const tot=times.reduce((a,b)=>a+b,0);myFin=tot;
+if(cfg.mode==='career'){const results=[{n:'คุณ',f:myFin},...AIS.map(a=>({n:a.n,f:a.fin,pr:a.pr}))].sort((a,b)=>a.f!=null&&b.f!=null?a.f-b.f:a.f!=null?-1:b.f!=null?1:(b.pr||0)-(a.pr||0));results.forEach((r,i)=>{career.points[r.n]=(career.points[r.n]||0)+(CAREER_POINTS[i]||0)});career.results.push({track:T.n,results:results.map((r,i)=>({n:r.n,position:i+1,points:CAREER_POINTS[i]||0}))});career.round=Math.min(career.round+1,TKS.length);saveCareer()}
+
 if(net)room.presence({fin:+tot.toFixed(3),st:'done'}).catch(()=>{});
-document.body.classList.remove('play');$('ov').style.display='flex';show('s-res');renderRes();btns();
+document.body.classList.remove('play');$('ov').style.display='flex';show('s-res');$('res-title').textContent=cfg.mode==='career'?'จบการแข่งขัน Career!':'เข้าเส้นชัย!';renderRes();btns();
 };
 const send=now=>{
 if(!net||!room||now-nt<60)return;nt=now;
@@ -424,7 +447,7 @@ $('tr').textContent=pitReq>=0?'เข้าพิทจบรอบนี้ →
 };
 const draw=now=>{
 ctx.setTransform(D,0,0,D,0,0);
-ctx.fillStyle='#2f6b4f';ctx.fillRect(0,0,W,H);
+ctx.fillStyle=T.night?'#091321':'#2f6b4f';ctx.fillRect(0,0,W,H);
 const z=Math.min(W,H)/520;
 ctx.translate(W/2,H*0.6);ctx.scale(z,z);ctx.translate(-car.x,-car.y);
 ctx.fillStyle='rgba(255,255,255,.09)';
@@ -433,9 +456,9 @@ for(let gx=Math.floor((car.x-vw)/g)*g;gx<car.x+vw;gx+=g)
 for(let gy=Math.floor((car.y-vh)/g)*g;gy<car.y+vh;gy+=g){ctx.beginPath();ctx.arc(gx,gy,4,0,7);ctx.fill()}
 ctx.lineJoin='round';
 const S=(w,c,d)=>{ctx.setLineDash(d||[]);ctx.lineWidth=w;ctx.strokeStyle=c;ctx.stroke(T.path)};
-S(2*T.sr+22,'#e9e4d6');S(2*T.sr+22,'#2f6fb0',[32,32]); // barrier
-S(2*T.sr,'#6b6a52'); // gravel / run-off
-S(2*(T.hw+12),'#ece6d4');S(2*(T.hw+12),'#c8402f',[28,28]); // kerb
+S(2*T.sr+22,T.night?'#24384d':'#e9e4d6');S(2*T.sr+22,T.night?'#e7b84b':'#2f6fb0',[32,32]); // barrier
+S(2*T.sr,T.night?'#18283a':'#6b6a52'); // gravel / run-off
+S(2*(T.hw+12),T.night?'#6f7b8a':'#ece6d4');S(2*(T.hw+12),T.night?'#e7b84b':'#c8402f',[28,28]); // kerb
 S(2*T.hw,'#3b3f47');S(4,'rgba(255,255,255,.25)',[30,40]);
 ctx.setLineDash([]);
 ctx.save();ctx.translate(T.pts[0][0],T.pts[0][1]);ctx.rotate(T.a0);
@@ -444,7 +467,7 @@ ctx.restore();
 ctx.font='600 15px Kanit,sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.6)';ctx.fillStyle='#fff';
 for(const r of RC){carAt(r.x,r.y,r.a,r.c,r.m||0);ctx.strokeText(r.n,r.x,r.y-30);ctx.fillText(r.n,r.x,r.y-30)}
 if(hit>0){ctx.fillStyle='rgba(255,230,150,'+hit*3+')';ctx.beginPath();ctx.arc(car.x,car.y,28,0,7);ctx.fill()}
-carAt(car.x,car.y,car.a,PAL[cfg.col],cfg.car);
+carAt(car.x,car.y,car.a,PAL[cfg.col],cfg.mode==='career'?0:cfg.car);
 $('lap').textContent=Math.min(laps+1,TOTAL)+'/'+TOTAL;
 $('cur').textContent=mode==='race'?fmt((now-lapStart)/1000):'0:00.000';
 $('best').textContent=best?fmt(best):'–';
@@ -542,7 +565,8 @@ $('b-make').onclick=()=>enter('',1);
 $('b-join').onclick=()=>{$('jrow').hidden=false;$('code').focus()};
 $('b-enter').onclick=()=>{const c=$('code').value.replace(/\D/g,'');if(c.length!==4)return msg('ใส่เลขห้อง 4 หลัก');enter(c,0)};
 $('b-start').onclick=()=>{if(room)room.presence({rnd:lastRnd+1,tk:cfg.tk,lp:cfg.laps}).catch(()=>{})};
-$('b-again').onclick=()=>{if(net){if(room)room.presence({rnd:lastRnd+1,tk:cfg.tk,lp:cfg.laps}).catch(()=>{})}else begin()};
+$('career-continue').onclick=()=>{careerUI();show('s-career')};
+$('b-again').onclick=()=>{if(cfg.mode==='career'){beginCareerRace();return}if(net){if(room)room.presence({rnd:lastRnd+1,tk:cfg.tk,lp:cfg.laps}).catch(()=>{})}else begin()};
 $('b-leave').onclick=leave;$('b-exit').onclick=leave;
 R=/^https?:/.test(location.protocol)?makeNet():null;
 if(R){$('b-make').disabled=$('b-join').disabled=false}
